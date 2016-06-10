@@ -28,38 +28,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <err.h>
 #include <tee_client_api.h>
 #include <ta_bsload.h>
 
-static void *bs_disk2mem(size_t *size)
+static void bs_disk2mem(TEEC_TempMemoryReference *mem)
 {
-	size_t ret;
-	uint8_t *dst;
+	int fd;
 	FILE *fin = fopen("bs.bit", "r");
 
 	if (!fin)
-		return NULL;
+		return;
 
 	fseek(fin, 0L, SEEK_END);
-	*size = ftell(fin);
+	mem->size = ftell(fin);
 
-	if (!*size)
-		return NULL;
+	if (!mem->size)
+		return;
 
 	rewind(fin);
 
-	dst = malloc(*size);
-	if (!dst)
-		return NULL;
+	fd = fileno(fin);
 
-	ret = fread(dst, 1, *size, fin);
-	if (ret != *size) {
-		free(dst);
-		return NULL;
-	}
+	mem->buffer = mmap(NULL, mem->size, PROT_READ, MAP_SHARED, fd, 0);
 
-	return dst;
+	fclose(fin);
+}
+
+static void bs_free(TEEC_TempMemoryReference *mem)
+{
+	munmap(mem->buffer, mem->size);
 }
 
 int main(int argc, char *argv[])
@@ -102,7 +101,7 @@ int main(int argc, char *argv[])
 	memset(&op, 0, sizeof(op));
 	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE,
 					 TEEC_NONE, TEEC_NONE);
-	op.params[0].tmpref.buffer = bs_disk2mem(&op.params[0].tmpref.size);
+	bs_disk2mem(&op.params[0].tmpref);
 	if (!op.params[0].tmpref.buffer)
 		errx(1, "bs_disk2mem failed");
 
@@ -113,7 +112,7 @@ int main(int argc, char *argv[])
 	printf("Invoking TA to load bitstream\n");
 	res = TEEC_InvokeCommand(&sess, TA_BSLOAD_CMD_LOAD_BITSTREAM, &op,
 				 &err_origin);
-	free(op.params[0].tmpref.buffer);
+	bs_free(&op.params[0].tmpref);
 	if (res != TEEC_SUCCESS)
 		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
 			res, err_origin);
