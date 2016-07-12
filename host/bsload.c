@@ -33,6 +33,8 @@
 #include <tee_client_api.h>
 #include <ta_bsload.h>
 
+#define BITSTREAM_HEADER_SIZE	(35 * 4)
+
 static void bs_disk2mem(TEEC_TempMemoryReference *mem)
 {
 	int fd;
@@ -81,7 +83,7 @@ int main(int argc, char *argv[])
 	res = TEEC_OpenSession(&ctx, &sess, &uuid,
 			       TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
 	if (res != TEEC_SUCCESS)
-		errx(1, "TEEC_Opensession failed with code 0x%x origin 0x%x",
+		errx(1, "TEEC_Opensession failed with code %#x origin %#x",
 			res, err_origin);
 
 	/* load bitstream into shared memory */
@@ -102,19 +104,24 @@ int main(int argc, char *argv[])
 	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE,
 					 TEEC_NONE, TEEC_NONE);
 	bs_disk2mem(&op.params[0].tmpref);
+	op.params[0].tmpref.buffer += BITSTREAM_HEADER_SIZE;
+	op.params[0].tmpref.size -= BITSTREAM_HEADER_SIZE;
+
 	if (!op.params[0].tmpref.buffer)
 		errx(1, "bs_disk2mem failed");
 
+#if 0
 	{
 		uint32_t *data = op.params[0].tmpref.buffer;
 		printf("size:%zu, data:%#x\n", op.params[0].tmpref.size, *data);
 	}
+#endif
 	printf("Invoking TA to load bitstream\n");
 	res = TEEC_InvokeCommand(&sess, TA_BSLOAD_CMD_LOAD_BITSTREAM, &op,
 				 &err_origin);
 	bs_free(&op.params[0].tmpref);
 	if (res != TEEC_SUCCESS)
-		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+		errx(1, "TEEC_InvokeCommand failed with code %#x origin %#x",
 			res, err_origin);
 	else
 		printf("bitstream loaded\n");
