@@ -35,10 +35,10 @@
 
 #define BITSTREAM_HEADER_SIZE	(35 * 4)
 
-static void bs_disk2mem(TEEC_TempMemoryReference *mem)
+static void bs_disk2mem(TEEC_TempMemoryReference *mem, const char *bsfile)
 {
 	int fd;
-	FILE *fin = fopen("bs.bit", "r");
+	FILE *fin = fopen(bsfile, "r");
 
 	if (!fin)
 		return;
@@ -71,22 +71,23 @@ int main(int argc, char *argv[])
 	TEEC_Operation op;
 	TEEC_UUID uuid = TA_BSLOAD_UUID;
 	uint32_t err_origin;
+	const char *bsfile = "bs.bit";
+
+	if (argc > 1) {
+		bsfile = argv[1];
+	}
 
 	/* Initialize a context connecting us to the TEE */
 	res = TEEC_InitializeContext(NULL, &ctx);
 	if (res != TEEC_SUCCESS)
 		errx(1, "TEEC_InitializeContext failed with code 0x%x", res);
 
-	/*
-	 * Open a session to the "bsload" TA
-	 */
+	/* Open a session to the "bsload" TA */
 	res = TEEC_OpenSession(&ctx, &sess, &uuid,
 			       TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
 	if (res != TEEC_SUCCESS)
 		errx(1, "TEEC_Opensession failed with code %#x origin %#x",
 			res, err_origin);
-
-	/* load bitstream into shared memory */
 
 	/*
 	 * Execute a function in the TA by invoking it, in this case
@@ -103,20 +104,20 @@ int main(int argc, char *argv[])
 	memset(&op, 0, sizeof(op));
 	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE,
 					 TEEC_NONE, TEEC_NONE);
-	bs_disk2mem(&op.params[0].tmpref);
-	op.params[0].tmpref.buffer += BITSTREAM_HEADER_SIZE;
-	op.params[0].tmpref.size -= BITSTREAM_HEADER_SIZE;
-
+	bs_disk2mem(&op.params[0].tmpref, bsfile);
 	if (!op.params[0].tmpref.buffer)
 		errx(1, "bs_disk2mem failed");
 
-#if 0
+	op.params[0].tmpref.buffer += BITSTREAM_HEADER_SIZE;
+	op.params[0].tmpref.size -= BITSTREAM_HEADER_SIZE;
+
+#ifdef DEBUG
 	{
 		uint32_t *data = op.params[0].tmpref.buffer;
 		printf("size:%zu, data:%#x\n", op.params[0].tmpref.size, *data);
 	}
 #endif
-	printf("Invoking TA to load bitstream\n");
+	printf("Invoking TA to load bitstream '%s'\n", bsfile);
 	res = TEEC_InvokeCommand(&sess, TA_BSLOAD_CMD_LOAD_BITSTREAM, &op,
 				 &err_origin);
 	bs_free(&op.params[0].tmpref);
