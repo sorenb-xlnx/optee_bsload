@@ -9,7 +9,7 @@ READELF = $(CROSS_COMPILE)readelf
 
 OBJS = bsload.o
 
-CFLAGS += -Wall -I../ta/include -I$(TEEC_EXPORT)/include
+CFLAGS += -Wall -I$(TEEC_EXPORT)/include -I$(TA_DEV_KIT_DIR)/host_include
 LDADD += -lteec -L$(TEEC_EXPORT)/lib
 
 .PHONY: all

@@ -31,7 +31,7 @@
 #include <sys/mman.h>
 #include <err.h>
 #include <tee_client_api.h>
-#include <ta_bsload.h>
+#include <zynqmp_bsload.h>
 
 #define BITSTREAM_HEADER_SIZE	(35 * 4)
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	TEEC_Context ctx;
 	TEEC_Session sess;
 	TEEC_Operation op;
-	TEEC_UUID uuid = TA_BSLOAD_UUID;
+	TEEC_UUID uuid = ZYNQMP_BSLOAD_UUID;
 	uint32_t err_origin;
 	const char *bsfile = "bs.bit";
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 	printf("Invoking TA to load bitstream '%s'\n", bsfile);
-	res = TEEC_InvokeCommand(&sess, TA_BSLOAD_CMD_LOAD_BITSTREAM, &op,
+	res = TEEC_InvokeCommand(&sess, ZYNQMP_BSLOAD_CMD_LOAD_BITSTREAM, &op,
 				 &err_origin);
 	bs_free(&op.params[0].tmpref);
 	if (res != TEEC_SUCCESS)
