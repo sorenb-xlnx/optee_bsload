@@ -33,8 +33,6 @@
 #include <tee_client_api.h>
 #include <zynqmp_bsload.h>
 
-#define BITSTREAM_HEADER_SIZE	(35 * 4)
-
 static void bs_disk2mem(TEEC_TempMemoryReference *mem, const char *bsfile)
 {
 	int fd;
@@ -107,9 +105,6 @@ int main(int argc, char *argv[])
 	bs_disk2mem(&op.params[0].tmpref, bsfile);
 	if (!op.params[0].tmpref.buffer)
 		errx(1, "bs_disk2mem failed");
-
-	op.params[0].tmpref.buffer += BITSTREAM_HEADER_SIZE;
-	op.params[0].tmpref.size -= BITSTREAM_HEADER_SIZE;
 
 #ifdef DEBUG
 	{
