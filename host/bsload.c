@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
 	 * the remaining three parameters are unused.
 	 */
 	memset(&op, 0, sizeof(op));
-	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE,
-					 TEEC_NONE, TEEC_NONE);
+	op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT,
+			TEEC_VALUE_INPUT, TEEC_NONE, TEEC_NONE);
 	bs_disk2mem(&op.params[0].tmpref, bsfile);
 	if (!op.params[0].tmpref.buffer)
 		errx(1, "bs_disk2mem failed");
